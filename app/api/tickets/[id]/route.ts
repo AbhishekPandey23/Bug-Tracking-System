@@ -4,9 +4,9 @@ import prisma from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const { id } = params;
+  const { id } = context.params;
 
   try {
     const ticket = await prisma.ticket.findUnique({
@@ -36,9 +36,9 @@ export async function GET(
 
 export async function DELETE(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: { id: string } }
 ) {
-  const { id } = await context.params;
+  const { id } = context.params;
 
   try {
     await prisma.ticket.delete({ where: { id } });
@@ -54,9 +54,9 @@ export async function DELETE(
 
 export async function PATCH(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: { id: string } }
 ) {
-  const { id } = await context.params;
+  const { id } = context.params;
 
   try {
     const body = await req.json();
