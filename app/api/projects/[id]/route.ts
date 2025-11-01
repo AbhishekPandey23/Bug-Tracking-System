@@ -2,16 +2,16 @@ import { currentUser } from '@clerk/nextjs/server';
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// ✅ Correct params interface
-interface Params {
-  params: { id: string };
-}
-
-// 🟢 GET a single project by ID
-export async function GET(_req: NextRequest, { params }: Params) {
+// ✅ Compatible with new Next.js RouteHandler type (params is a Promise)
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await context.params;
+
     const project = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         owner: true,
         tickets: true,
@@ -32,13 +32,16 @@ export async function GET(_req: NextRequest, { params }: Params) {
   }
 }
 
-// 🟢 PUT update a project
-export async function PUT(req: NextRequest, { params }: Params) {
+export async function PUT(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await context.params;
     const { title, description, ownerId } = await req.json();
 
     const updatedProject = await prisma.project.update({
-      where: { id: params.id },
+      where: { id },
       data: { title, description, ownerId },
     });
 
@@ -52,41 +55,34 @@ export async function PUT(req: NextRequest, { params }: Params) {
   }
 }
 
-// 🗑️ DELETE specific project by ID
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
 
     const user = await currentUser();
     if (!user) {
-      console.log('❌ Unauthorized - no user found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const project = await prisma.project.findUnique({
-      where: { id },
-    });
+    const project = await prisma.project.findUnique({ where: { id } });
 
     if (!project) {
-      console.log('❌ Project not found');
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
     if (project.ownerId !== user.id) {
-      console.log('❌ Forbidden - user not owner');
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Delete all tickets first
     await prisma.ticket.deleteMany({ where: { projectId: id } });
-
-    // Then delete the project
     await prisma.project.delete({ where: { id } });
 
-    console.log('✅ Project deleted successfully');
     return NextResponse.json({ message: 'Project deleted successfully' });
   } catch (error) {
-    console.error('🔥 DELETE /api/projects/[id] error:', error);
+    console.error('DELETE /api/projects/[id] error:', error);
     return NextResponse.json(
       { error: 'Internal Server Error', details: (error as Error).message },
       { status: 500 }
