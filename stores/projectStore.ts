@@ -36,7 +36,9 @@ export const useProjectStore = create<ProjectStore>()(
           const res = await fetch('/api/projects');
           if (!res.ok) throw new Error('Failed to fetch projects');
           const data = await res.json();
-          if (Array.isArray(data)) set({ projects: data });
+          if (data.success && Array.isArray(data.data)) {
+            set({ projects: data.data });
+          }
         } catch (err) {
           console.error('Error fetching projects:', err);
         } finally {
@@ -66,30 +68,35 @@ export const useProjectStore = create<ProjectStore>()(
             body: JSON.stringify({ title, description }),
           });
           if (!res.ok) throw new Error('Failed to create project');
-          const newProject = await res.json();
-          set({ projects: [newProject, ...get().projects] });
+          const response = await res.json();
+          if (response.success && response.data) {
+            set({ projects: [response.data, ...get().projects] });
+          }
         } catch (err) {
           console.error('Error creating project:', err);
         }
       },
 
       deleteProject: async (id: string) => {
-        const res = await fetch(`/api/projects/${id}`, {
-          method: 'DELETE',
-        });
-
-        if (res.ok) {
-          set({
-            projects: get().projects.filter((project) => project.id !== id),
+        try {
+          const res = await fetch(`/api/projects/${id}`, {
+            method: 'DELETE',
           });
-        } else {
-          const error = await res.json();
-          console.error('Failed to delete project:', error);
+          if (res.ok) {
+            set({
+              projects: get().projects.filter((p) => p.id !== id),
+            });
+          } else {
+            const error = await res.json();
+            console.error('Failed to delete project:', error);
+          }
+        } catch (err) {
+          console.error('Error deleting project:', err);
         }
       },
     }),
     {
-      name: 'project-storage', // localStorage key
+      name: 'project-storage',
     }
   )
 );
