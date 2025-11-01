@@ -1,28 +1,21 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// app/api/tickets/route.ts
 import { NextResponse } from 'next/server';
+import { currentUser } from '@clerk/nextjs/server';
 import prisma from '@/lib/prisma';
-import { auth } from '@clerk/nextjs/server';
-import type { NextRequest } from 'next/server';
 
-// ✅ GET — Fetch all tickets or tickets by projectId
-export async function GET(req: NextRequest) {
+// ✅ GET /api/tickets?projectId=xxx
+export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const projectId = searchParams.get('projectId');
+    const url = new URL(req.url);
+    const projectId = url.searchParams.get('projectId');
 
     const tickets = await prisma.ticket.findMany({
-      where: projectId ? { projectId } : undefined,
-      include: {
-        project: { select: { id: true, title: true } },
-        assignee: { select: { clerkId: true, name: true, email: true } },
-      },
+      where: projectId ? { projectId } : {},
       orderBy: { createdAt: 'desc' },
     });
 
     return NextResponse.json({ success: true, data: tickets });
-  } catch (error: any) {
-    console.error('❌ Error fetching tickets:', error);
+  } catch (error) {
+    console.error('Error fetching tickets:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch tickets' },
       { status: 500 }
@@ -30,55 +23,59 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ✅ POST — Create a new ticket
-export async function POST(req: NextRequest) {
+// ✅ POST /api/tickets
+export async function POST(req: Request) {
   try {
-    const { userId }: any = auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await currentUser();
+
+    if (!user) {
+      console.log('No user found in POST /api/tickets');
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const body = await req.json();
-    const { title, description, projectId, status, priority } = body ?? {};
+    const { title, description, priority, status, projectId } =
+      await req.json();
 
-    console.log('📩 Incoming Ticket Data:', body);
-
+    // Basic validation
     if (!title || !projectId) {
       return NextResponse.json(
-        { success: false, error: 'Title and projectId are required' },
+        { success: false, error: 'Missing title or projectId' },
         { status: 400 }
       );
     }
 
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
+    // Ensure user exists in DB (sync Clerk -> Prisma)
+    let dbUser = await prisma.user.findUnique({
+      where: { clerkId: user.id },
     });
 
-    if (!project) {
-      return NextResponse.json(
-        { success: false, error: 'Project not found' },
-        { status: 404 }
-      );
+    if (!dbUser) {
+      dbUser = await prisma.user.create({
+        data: {
+          clerkId: user.id,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+          email: user.emailAddresses[0]?.emailAddress || '',
+        },
+      });
     }
 
     const ticket = await prisma.ticket.create({
       data: {
         title,
         description: description || '',
-        status: status?.toUpperCase() || 'OPEN',
         priority: priority?.toUpperCase() || 'MEDIUM',
+        status: status?.toUpperCase() || 'OPEN',
         project: { connect: { id: projectId } },
-        assignee: { connect: { clerkId: userId } }, // ✅ Always link to current user
-      },
-      include: {
-        project: { select: { id: true, title: true } },
-        assignee: { select: { clerkId: true, name: true, email: true } },
+        assignee: { connect: { clerkId: dbUser.clerkId } }, // ✅ correct relation
       },
     });
 
-    return NextResponse.json({ success: true, data: ticket }, { status: 201 });
-  } catch (err: any) {
-    console.error('❌ Ticket creation failed:', err);
+    return NextResponse.json({ success: true, data: ticket });
+  } catch (error) {
+    console.error('Error creating ticket:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to create ticket' },
       { status: 500 }

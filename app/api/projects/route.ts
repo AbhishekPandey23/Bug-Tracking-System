@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import prisma from '@/lib/prisma';
 
-// GET: fetch all projects of the logged-in user
 export async function GET() {
   try {
     const user = await currentUser();
     if (!user)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
 
     const projects = await prisma.project.findMany({
       where: { ownerId: user.id },
@@ -15,38 +17,39 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json(projects);
+    return NextResponse.json({ success: true, data: projects });
   } catch (error) {
-    console.error(error);
+    console.error('Error fetching projects:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { success: false, message: 'Server error' },
       { status: 500 }
     );
   }
 }
 
-// POST: create new project
 export async function POST(req: Request) {
   try {
     const user = await currentUser();
     if (!user)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
 
-    const { title, description } = await req.json();
-
+    const body = await req.json();
     const project = await prisma.project.create({
       data: {
-        title,
-        description,
+        title: body.title,
+        description: body.description,
         ownerId: user.id,
       },
     });
 
-    return NextResponse.json(project);
+    return NextResponse.json({ success: true, data: project });
   } catch (error) {
-    console.error(error);
+    console.error('Error creating project:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { success: false, message: 'Server error' },
       { status: 500 }
     );
   }

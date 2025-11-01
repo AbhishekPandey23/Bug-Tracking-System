@@ -41,6 +41,9 @@ export function AppSidebar() {
     },
   ];
 
+  // ✅ Debug check: confirm IDs exist
+  console.log('Sidebar projects:', projects);
+
   return (
     <Sidebar collapsible="icon">
       {/* ---------- Logo ---------- */}
@@ -88,11 +91,14 @@ export function AppSidebar() {
           <SidebarGroupContent>
             {projects && projects.length > 0 ? (
               <SidebarMenu>
-                {projects.map((project) => (
-                  <SidebarMenuItem key={project.id}>
+                {projects.map((project, index) => (
+                  // ✅ Fallback key if project.id is missing
+                  <SidebarMenuItem key={project.id ?? index}>
                     <SidebarMenuButton asChild>
-                      <Link href={`/dashboard/projects/${project.id}`}>
-                        <span className="truncate">{project.title}</span>
+                      <Link href={`/dashboard/projects/${project.id ?? ''}`}>
+                        <span className="truncate">
+                          {project.title || 'Untitled Project'}
+                        </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -107,7 +113,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* The dialog is rendered here */}
+      {/* ---------- New Project Dialog ---------- */}
       <NewProjectForm open={open} setOpen={setOpen} />
     </Sidebar>
   );

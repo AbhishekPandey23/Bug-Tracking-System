@@ -6,9 +6,9 @@ import { useParams } from 'next/navigation';
 import { useProjectStore } from '@/stores/projectStore';
 import { useTicketStore } from '@/stores/ticketStore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import TicketForm from '@/components/TicketForm';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
+import TicketForm from '@/components/TicketForm';
 
 export default function ProjectDetailPage() {
   const [showForm, setShowForm] = useState(false);
@@ -22,11 +22,15 @@ export default function ProjectDetailPage() {
     if (id) fetchTicketsByProject(id as string);
   }, [id, fetchTicketsByProject]);
 
-  if (!project) return <p>Project not found.</p>;
+  // ✅ Make sure tickets is always an array
+  const ticketList = Array.isArray(tickets) ? tickets : [];
+
+  if (!project) return <p className="p-6 text-gray-500">Project not found.</p>;
 
   return (
     <div className="p-6 space-y-6">
-      <Card className="shadow-md">
+      {/* Project Details */}
+      <Card className="shadow-md border">
         <CardHeader>
           <CardTitle className="text-2xl font-bold">{project.title}</CardTitle>
         </CardHeader>
@@ -40,14 +44,20 @@ export default function ProjectDetailPage() {
 
       {/* Tickets List */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Tickets</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Tickets</h2>
+          <Button onClick={() => setShowForm(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" /> New Ticket
+          </Button>
+        </div>
+
         {loading && <p>Loading tickets...</p>}
-        {!loading && tickets.length === 0 && (
+        {!loading && ticketList.length === 0 && (
           <p className="text-gray-500">No tickets found for this project.</p>
         )}
 
         <div className="grid gap-4">
-          {tickets.map((ticket: any) => (
+          {ticketList.map((ticket: any) => (
             <Card key={ticket.id} className="hover:shadow-lg transition">
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
@@ -75,12 +85,14 @@ export default function ProjectDetailPage() {
           ))}
         </div>
       </div>
-      <Button onClick={() => setShowForm(true)}>
-        <PlusCircle className="mr-2 h-4 w-4" /> New Ticket
-      </Button>
 
-      {/* Add New Ticket Button */}
-      {showForm && <TicketForm onClose={() => setShowForm(false)} />}
+      {/* Ticket Form Modal */}
+      {showForm && (
+        <TicketForm
+          projectId={id as string}
+          onClose={() => setShowForm(false)}
+        />
+      )}
     </div>
   );
 }

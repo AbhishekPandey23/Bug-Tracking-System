@@ -45,16 +45,20 @@ export const useTicketStore = create<TicketStore>()(
       error: null,
 
       // Fetch all tickets
-      fetchTickets: async (filters) => {
-        set({ loading: true, error: null });
+      fetchTickets: async () => {
+        set({ loading: true });
         try {
-          const params = new URLSearchParams(filters as Record<string, string>);
-          const res = await fetch(`/api/tickets?${params.toString()}`);
+          const res = await fetch('/api/tickets');
           const data = await res.json();
-          if (!data.success) throw new Error(data.error);
-          set({ tickets: data.data, loading: false });
-        } catch (err: any) {
-          set({ error: err.message, loading: false });
+
+          // ✅ Always set an array, even if API returns {}
+          set({
+            tickets: Array.isArray(data.data) ? data.data : [],
+            loading: false,
+          });
+        } catch (error) {
+          console.error('Error fetching tickets:', error);
+          set({ tickets: [], loading: false });
         }
       },
 
@@ -165,14 +169,18 @@ export const useTicketStore = create<TicketStore>()(
       },
 
       // fetch ticket based on projects
-      fetchTicketsByProject: async (id: any) => {
-        set({ loading: true, error: null });
+      fetchTicketsByProject: async (projectId: string) => {
+        set({ loading: true });
         try {
-          const res = await fetch(`/api/tickets?projectId=${id}`);
+          const res = await fetch(`/api/tickets?projectId=${projectId}`);
           const data = await res.json();
-          set({ tickets: data, loading: false });
-        } catch (err: any) {
-          set({ error: err.message, loading: false });
+          set({
+            tickets: Array.isArray(data.data) ? data.data : [],
+            loading: false,
+          });
+        } catch (error) {
+          console.error('Error fetching project tickets:', error);
+          set({ tickets: [], loading: false });
         }
       },
     }),

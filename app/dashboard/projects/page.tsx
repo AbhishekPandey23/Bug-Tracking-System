@@ -15,6 +15,9 @@ export default function ProjectsPage() {
     fetchProjects();
   }, [fetchProjects]);
 
+  // ✅ Debug: Check what data is being returned
+  console.log('Projects:', projects);
+
   return (
     <div className="p-6 space-y-6">
       {/* ---------- Header Section ---------- */}
@@ -34,8 +37,9 @@ export default function ProjectsPage() {
 
       {/* ---------- Projects Grid ---------- */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {projects.map((project) => (
-          <ProjectCard key={project.id} {...project} />
+        {projects.map((project, index) => (
+          // ✅ Fallback to index if project.id is undefined
+          <ProjectCard key={project.id ?? index} {...project} />
         ))}
       </div>
 

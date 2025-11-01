@@ -34,10 +34,12 @@ export const useProjectStore = create<ProjectStore>()(
         set({ loading: true });
         try {
           const res = await fetch('/api/projects');
-          if (!res.ok) throw new Error('Failed to fetch projects');
           const data = await res.json();
+
           if (data.success && Array.isArray(data.data)) {
             set({ projects: data.data });
+          } else {
+            console.error('Unexpected response:', data);
           }
         } catch (err) {
           console.error('Error fetching projects:', err);
@@ -67,10 +69,12 @@ export const useProjectStore = create<ProjectStore>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, description }),
           });
-          if (!res.ok) throw new Error('Failed to create project');
-          const response = await res.json();
-          if (response.success && response.data) {
-            set({ projects: [response.data, ...get().projects] });
+
+          const result = await res.json();
+          if (result.success && result.data) {
+            set({ projects: [result.data, ...get().projects] });
+          } else {
+            console.error('Failed to create project:', result);
           }
         } catch (err) {
           console.error('Error creating project:', err);
@@ -82,13 +86,14 @@ export const useProjectStore = create<ProjectStore>()(
           const res = await fetch(`/api/projects/${id}`, {
             method: 'DELETE',
           });
-          if (res.ok) {
-            set({
-              projects: get().projects.filter((p) => p.id !== id),
-            });
+          const data = await res.json();
+
+          if (data.success) {
+            set((state) => ({
+              projects: state.projects.filter((p) => p.id !== id),
+            }));
           } else {
-            const error = await res.json();
-            console.error('Failed to delete project:', error);
+            console.error('Failed to delete project:', data);
           }
         } catch (err) {
           console.error('Error deleting project:', err);

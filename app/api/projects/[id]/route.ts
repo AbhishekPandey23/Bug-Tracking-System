@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { currentUser } from '@clerk/nextjs/server';
 
 // ✅ GET handler
 export async function GET(
@@ -62,18 +63,40 @@ export async function PUT(
 
 // ✅ DELETE handler (optional)
 export async function DELETE(
-  req: NextRequest,
+  req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params;
-
   try {
+    const { id } = await context.params; // 👈 unwrap the promise
+
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const project = await prisma.project.findUnique({ where: { id } });
+    if (!project || project.ownerId !== user.id) {
+      return NextResponse.json(
+        { success: false, message: 'Not found or unauthorized' },
+        { status: 404 }
+      );
+    }
+
+    await prisma.ticket.deleteMany({ where: { projectId: id } });
     await prisma.project.delete({ where: { id } });
-    return NextResponse.json({ message: 'Project deleted successfully' });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Project deleted successfully',
+      id,
+    });
   } catch (error) {
-    console.error(error);
+    console.error('Error deleting project:', error);
     return NextResponse.json(
-      { error: 'Failed to delete project' },
+      { success: false, message: 'Server error' },
       { status: 500 }
     );
   }

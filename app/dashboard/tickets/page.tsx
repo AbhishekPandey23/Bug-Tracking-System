@@ -16,7 +16,7 @@ import TicketCard from '@/components/TicketCard';
 import TicketForm from '@/components/TicketForm';
 
 export default function TicketsPage() {
-  const { tickets, fetchTickets } = useTicketStore();
+  const { tickets, fetchTickets, loading } = useTicketStore();
   const { projects, fetchProjects } = useProjectStore();
   const [showForm, setShowForm] = useState(false);
   const [filters, setFilters] = useState({
@@ -30,8 +30,11 @@ export default function TicketsPage() {
     fetchProjects();
   }, [fetchTickets, fetchProjects]);
 
-  // Filter tickets based on selected filters
-  const filteredTickets = tickets.filter((ticket) => {
+  // ✅ Ensure tickets is always an array (to avoid .filter crash)
+  const ticketList = Array.isArray(tickets) ? tickets : [];
+
+  // Filter tickets safely
+  const filteredTickets = ticketList.filter((ticket) => {
     const matchStatus = filters.status
       ? ticket.status === filters.status.toUpperCase()
       : true;
@@ -46,6 +49,7 @@ export default function TicketsPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Filters & Create Button */}
       <div className="flex justify-between items-center">
         <div className="flex gap-4">
           {/* Filter: Priority */}
@@ -93,11 +97,12 @@ export default function TicketsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
-              {projects.map((proj) => (
-                <SelectItem key={proj.id} value={proj.id}>
-                  {proj.title}
-                </SelectItem>
-              ))}
+              {Array.isArray(projects) &&
+                projects.map((proj) => (
+                  <SelectItem key={proj.id} value={proj.id}>
+                    {proj.title}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -107,12 +112,18 @@ export default function TicketsPage() {
         </Button>
       </div>
 
+      {/* Tickets Grid */}
+      {loading && <p>Loading tickets...</p>}
+      {!loading && filteredTickets.length === 0 && (
+        <p className="text-gray-500">No tickets found.</p>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredTickets.map((ticket) => (
           <TicketCard key={ticket.id} ticket={ticket} />
         ))}
       </div>
 
+      {/* Ticket Creation Form */}
       {showForm && <TicketForm onClose={() => setShowForm(false)} />}
     </div>
   );
