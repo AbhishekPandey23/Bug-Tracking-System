@@ -1,0 +1,10 @@
+[build]
+  command = "pnpm prisma generate && pnpm build"
+  publish = ".next"
+
+[functions]
+  node_bundler = "esbuild"
+
+# ✅ Disable or ignore secret scanning for known public env vars
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL,NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL,NEXT_PUBLIC_CLERK_SIGN_IN_URL,NEXT_PUBLIC_CLERK_SIGN_UP_URL,NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
