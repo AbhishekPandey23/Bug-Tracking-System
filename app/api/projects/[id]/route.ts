@@ -1,13 +1,14 @@
 import { currentUser } from '@clerk/nextjs/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 
+// ✅ Correct params interface
 interface Params {
   params: { id: string };
 }
 
-// GET a single project by ID
-export async function GET(_req: Request, { params }: Params) {
+// 🟢 GET a single project by ID
+export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const project = await prisma.project.findUnique({
       where: { id: params.id },
@@ -17,8 +18,9 @@ export async function GET(_req: Request, { params }: Params) {
       },
     });
 
-    if (!project)
+    if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
 
     return NextResponse.json(project);
   } catch (error) {
@@ -31,17 +33,13 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 // 🟢 PUT update a project
-export async function PUT(req: Request, { params }: Params) {
+export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const { title, description, ownerId } = await req.json();
 
     const updatedProject = await prisma.project.update({
       where: { id: params.id },
-      data: {
-        title,
-        description,
-        ownerId,
-      },
+      data: { title, description, ownerId },
     });
 
     return NextResponse.json(updatedProject);
@@ -54,14 +52,10 @@ export async function PUT(req: Request, { params }: Params) {
   }
 }
 
-// ✅ Delete specific project by ID
-export async function DELETE(
-  req: Request,
-  context: { params: Promise<{ id: string }> }
-) {
+// 🗑️ DELETE specific project by ID
+export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    const { id } = await context.params; // ✅ unwrap the params promise
-    console.log('🗑️ DELETE request received for project:', id);
+    const { id } = params;
 
     const user = await currentUser();
     if (!user) {
@@ -84,11 +78,9 @@ export async function DELETE(
     }
 
     // Delete all tickets first
-    console.log('🧹 Deleting tickets of project:', id);
     await prisma.ticket.deleteMany({ where: { projectId: id } });
 
-    // Delete the project
-    console.log('✅ Deleting project...');
+    // Then delete the project
     await prisma.project.delete({ where: { id } });
 
     console.log('✅ Project deleted successfully');
