@@ -9,9 +9,11 @@ interface Params {
   params: { id: string };
 }
 
-export async function GET(req: NextRequest, { params }: Params) {
-  const { id } = params;
+// ✅ GET - Fetch a single ticket by ID
+export async function GET(_req: NextRequest, { params }: Params) {
   try {
+    const { id } = params;
+
     const ticket = await prisma.ticket.findUnique({
       where: { id },
       include: {
@@ -19,14 +21,16 @@ export async function GET(req: NextRequest, { params }: Params) {
         assignee: { select: { id: true, name: true } },
       },
     });
+
     if (!ticket)
       return NextResponse.json(
         { success: false, error: 'Ticket not found' },
         { status: 404 }
       );
+
     return NextResponse.json({ success: true, data: ticket });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error fetching ticket:', err);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch ticket' },
       { status: 500 }
@@ -34,24 +38,21 @@ export async function GET(req: NextRequest, { params }: Params) {
   }
 }
 
-export async function PUT(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+// ✅ PUT - Update a ticket
+export async function PUT(req: NextRequest, { params }: Params) {
   try {
-    const { id } = await context.params;
+    const { id } = params;
     const body = await req.json();
-
     const { title, description, status, priority, projectId, assigneeId } =
-      body;
+      body ?? {};
 
     const updatedTicket = await prisma.ticket.update({
       where: { id },
       data: {
         title,
         description,
-        status: status?.toUpperCase(), // ✅ convert to enum
-        priority: priority?.toUpperCase(),
+        status: status ? status.toUpperCase() : undefined,
+        priority: priority ? priority.toUpperCase() : undefined,
         project: projectId ? { connect: { id: projectId } } : undefined,
         assignee: assigneeId ? { connect: { id: assigneeId } } : undefined,
       },
@@ -61,24 +62,22 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json(updatedTicket);
+    return NextResponse.json({ success: true, data: updatedTicket });
   } catch (error) {
     console.error('❌ Ticket update failed:', error);
     return NextResponse.json(
-      { error: 'Failed to update ticket' },
+      { success: false, error: 'Failed to update ticket' },
       { status: 500 }
     );
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id } = await context.params; // ✅ Fix: await params
-
+// ✅ DELETE - Delete a ticket by ID
+export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
+    const { id } = params;
     const user = await currentUser();
+
     if (!user)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

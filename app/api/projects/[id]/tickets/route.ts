@@ -1,15 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 
-interface Params {
-  params: { projectId: string };
-}
-
-export async function GET(req: NextRequest, { params }: Params) {
+// ✅ Correct Next.js 15+ handler format
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ projectId: string }> }
+) {
   try {
-    const { projectId } = params;
+    // Await the params promise
+    const { projectId } = await context.params;
+
     const url = new URL(req.url);
     const status = url.searchParams.get('status');
     const priority = url.searchParams.get('priority');
@@ -21,11 +22,13 @@ export async function GET(req: NextRequest, { params }: Params) {
     const project = await prisma.project.findUnique({
       where: { id: projectId },
     });
-    if (!project)
+
+    if (!project) {
       return NextResponse.json(
         { success: false, error: 'Project not found' },
         { status: 404 }
       );
+    }
 
     const tickets = await prisma.ticket.findMany({
       where,
@@ -38,7 +41,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     return NextResponse.json({ success: true, data: tickets });
   } catch (err) {
-    console.error(err);
+    console.error('GET /api/projects/[projectId]/tickets error:', err);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch project tickets' },
       { status: 500 }
