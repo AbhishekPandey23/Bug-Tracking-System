@@ -5,22 +5,22 @@ import prisma from '@/lib/prisma';
 // ✅ Correct Next.js 15+ handler format
 export async function GET(
   req: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Await the params promise
-    const { projectId } = await context.params;
+    const { id } = await context.params;
 
     const url = new URL(req.url);
     const status = url.searchParams.get('status');
     const priority = url.searchParams.get('priority');
 
-    const where: any = { projectId };
+    const where: any = { projectId: id };
     if (status) where.status = status;
     if (priority) where.priority = priority;
 
     const project = await prisma.project.findUnique({
-      where: { id: projectId },
+      where: { id },
     });
 
     if (!project) {
@@ -41,7 +41,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: tickets });
   } catch (err) {
-    console.error('GET /api/projects/[projectId]/tickets error:', err);
+    console.error('GET /api/projects/[id]/tickets error:', err);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch project tickets' },
       { status: 500 }
