@@ -4,11 +4,11 @@ import prisma from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = params;
+  const { id } = await context.params;
 
+  try {
     const ticket = await prisma.ticket.findUnique({
       where: { id },
       include: {
@@ -36,13 +36,12 @@ export async function GET(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
+
   try {
-    const { id } = params;
-
     await prisma.ticket.delete({ where: { id } });
-
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('DELETE /api/tickets/[id] error:', error);
@@ -55,10 +54,11 @@ export async function DELETE(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
+
   try {
-    const { id } = params;
     const body = await req.json();
 
     const updatedTicket = await prisma.ticket.update({
