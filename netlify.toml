@@ -1,0 +1,6 @@
+[build]
+  command = "pnpm prisma generate && pnpm build"
+  publish = ".next"
+
+[functions]
+  node_bundler = "esbuild"
