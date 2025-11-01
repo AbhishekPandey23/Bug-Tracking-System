@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Ticket } from '@/lib/generated/prisma';
+import { Ticket } from '@prisma/client';
 
 interface Project {
   id: string;
